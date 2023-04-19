@@ -13,7 +13,7 @@ sudo apt update
 ```
     sudo apt install libboost-all-dev
 ```
-After you installed both libraries and downloaded the source code, go into the directory of the source code and compile it with CMake:
+After you installed both libraries and downloaded the source code, go into the directory of functoion1 and function2 and compile them separately with CMake:
 ```
 cmake -DCMAKE_BUILD_TYPE=RELEASE .
 make
