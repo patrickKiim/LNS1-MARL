@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 	Instance instance(vm["map"].as<string>(), vm["agents"].as<string>(),
 		vm["agentNum"].as<int>());
         
-    double time_limit = (double)7200;//vm["cutoffTime"].as<double>();
+    double time_limit = (double)72;//vm["cutoffTime"].as<double>();
     int screen = 0;//vm["screen"].as<int>();
 	srand(0);
 
