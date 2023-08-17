@@ -63,7 +63,7 @@ bool Selection::loadpath()
     for (int i = 0; i < num_agents; i++) {
         getline(myfile, line);
         tokenizer< char_separator<char> > tok2(line, sep2);
-        for (tokenizer< char_separator<char> >::iterator beg=tok2.begin(); beg!=tok.end(); beg++) {
+        for (tokenizer< char_separator<char> >::iterator beg=tok2.begin(); beg!=tok2.end(); beg++) {
             string temp=*beg;
             tokenizer< char_separator<char> > tok3(temp, sep);
             tokenizer< char_separator<char> >::iterator temp_beg=tok3.begin();
@@ -91,7 +91,7 @@ void Selection::build_element()
         }
         updateCollidingPairs(colliding_pairs, id, agents[id].path);
         path_table.insertPath(id, agents[id].path);
-        curr_sum_of_costs += (int)agents[id].path.size() - 1;;
+        curr_sum_of_costs += (int)agents[id].path.size() - 1;
     }
     curr_num_of_colliding_pairs = colliding_pairs.size();
     for(const auto& agent_pair : colliding_pairs)
@@ -158,8 +158,44 @@ bool Selection::run()
         if(succ && neighbor.agents.size()==neighbor_size)
             break;
     }
-
+    for (int i = 0; i < (int)neighbor.agents.size(); i++)
+    {
+        path_table.deletePath(neighbor.agents[i]);
+    }
     return false;
+}
+
+vector<vector<pair<int,int>>> Selection::runPP()
+{
+    auto shuffled_agents = neighbor.agents;
+    auto p = shuffled_agents.begin();
+    vector<vector<pair<int,int>>> temp(neighbor.agents.size(),vector<pair<int,int>>(10000, make_pair(-1,-1)));
+    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
+    int a=0;
+    while (p != shuffled_agents.end())
+    {
+        int id = *p;
+        agents[id].path = agents[id].path_planner->findPath(constraint_table);
+        assert(!agents[id].path.empty() && agents[id].path.back().location == agents[id].path_planner->goal_location);
+        path_table.insertPath(agents[id].id, agents[id].path);
+        int t=0;
+        for (const auto &state : agents[id].path)
+        {   temp[a][t]=instance.getCoordinate(state.location);
+            t++;
+        }
+        temp[a].resize(t);
+        a++;
+        ++p;
+    }
+    return temp;
+}
+
+
+void Selection::clear()
+{
+    path_table.clear();
+    collision_graph.clear();
+    goal_table.clear();
 }
 
 // return true if the new path has collisions;
