@@ -8,12 +8,12 @@ import numpy as np
 # from matplotlib.colors import hsv_to_rgb
 import math
 
-from my_lns2 import run_pp, adaptive_destroy,check_collision
+from my_lns2_imitation import run_pp, adaptive_destroy,check_collision, run_eecbs_intermediate
 from world_property import State
 from alg_parameters import *
 opposite_actions = {0: -1, 1: 3, 2: 4, 3: 1, 4: 2, 5: 7, 6: 8, 7: 5, 8: 6}
 
-class MAPFEnv(gym.Env):
+class MAPFEnv_imitation(gym.Env):
     """map MAPF problems to a standard RL environment"""
 
     metadata = {"render.modes": ["human", "ansi"]}
@@ -382,6 +382,13 @@ class MAPFEnv(gym.Env):
         return obs, vector, rewards, done, next_valid_actions, blockings, num_blockings, \
             leave_goals, num_on_goal, self.max_on_goal, num_dynamic_collide,num_agent_collide
 
+
+    def get_path_intermediate(self):
+        
+        eecbs_path = run_eecbs_intermediate(self.map, self.world.local_agents_poss, self.world.local_agents_goal, self.env_id)
+        
+        return eecbs_path
+
     def _global_reset(self):
         """restart a new task"""
         self.global_set_world()  # back to the initial situation
@@ -443,6 +450,7 @@ class MAPFEnv(gym.Env):
         self.local_path=[]
         for i in range(self.local_num_agents):
             self.local_path.append([self.world.local_agents_poss[i]])
+
         return False,self.destroy_weights,self.global_num_collison,makespan,num_update_path,reduced_collison, self.sipps_path
 
     def list_next_valid_actions(self,local_agent_index):
@@ -540,9 +548,9 @@ if __name__ == '__main__':
     from model import Model
     import torch
     import os
-    env = MAPFEnv(1)
-    if not os.path.exists("./record_files"):
-        os.makedirs("./record_files")
+    env = MAPFEnv_imitation(1)
+    if not os.path.exists("./record_files_imitation"):
+        os.makedirs("./record_files_imitation")
     can_not_use,global_num_collison=env._global_reset()
     global_task_solved,destroy_weights,global_num_collison, makespan=env._local_reset(8, False, True,True)
 

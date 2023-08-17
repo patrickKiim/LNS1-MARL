@@ -27,115 +27,40 @@ def global_write_to_wandb(curr_steps, global_perf,num_task):
     wandb.log({'Perf_global/Makespan': np.nanmean(global_perf["makespan"])}, step=curr_steps)
 
 
-def write_to_wandb(step, performance_dict=None, mb_loss=None, evaluate=True, greedy=True):
+def write_to_wandb(step, performance_dict=None, mb_loss=None):
     """record performance using wandb"""
-    if evaluate:
-        pass
-        # if greedy:
-        #     wandb.log({'Perf_greedy_eval/Reward': performance_dict['per_r']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Valid_rate': performance_dict['per_valid_rate']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Episode_length': performance_dict['per_episode_len']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Num_block': performance_dict['per_block']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Num_leave_goal': performance_dict['per_leave_goal']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Final_goals': performance_dict['per_final_goals']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Half_goals': performance_dict['per_half_goals']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Block_accuracy': performance_dict['per_block_acc']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Max_goals': performance_dict['per_max_goals']}, step=step)
-        #     wandb.log({'Perf_greedy_eval/Num_collide': performance_dict['per_num_collide']}, step=step)
-        #
-        # else:
-        #     wandb.log({'Perf_random_eval/Reward': performance_dict['per_r']}, step=step)
-        #     wandb.log({'Perf_random_eval/Valid_rate': performance_dict['per_valid_rate']}, step=step)
-        #     wandb.log({'Perf_random_eval/Episode_length': performance_dict['per_episode_len']}, step=step)
-        #     wandb.log({'Perf_random_eval/Num_block': performance_dict['per_block']}, step=step)
-        #     wandb.log({'Perf_random_eval/Num_leave_goal': performance_dict['per_leave_goal']}, step=step)
-        #     wandb.log({'Perf_random_eval/Final_goals': performance_dict['per_final_goals']}, step=step)
-        #     wandb.log({'Perf_random_eval/Half_goals': performance_dict['per_half_goals']}, step=step)
-        #     wandb.log({'Perf_random_eval/Block_accuracy': performance_dict['per_block_acc']}, step=step)
-        #     wandb.log({'Perf_random_eval/Max_goals': performance_dict['per_max_goals']}, step=step)
-        #     wandb.log({'Perf_random_eval/Num_collide': performance_dict['per_num_collide']}, step=step)
+    loss_vals = np.nanmean(mb_loss, axis=0)
+    wandb.log({'Perf/Reward': performance_dict['per_r']}, step=step)
+    wandb.log({'Perf/Valid_rate': performance_dict['per_valid_rate']}, step=step)
+    wandb.log({'Perf/Episode_length': performance_dict['per_episode_len']}, step=step)
+    wandb.log({'Perf/Num_block': performance_dict['per_block']}, step=step)
+    wandb.log({'Perf/Num_leave_goal': performance_dict['per_leave_goal']}, step=step)
+    wandb.log({'Perf/Final_goals': performance_dict['per_final_goals']}, step=step)
+    wandb.log({'Perf/Half_goals': performance_dict['per_half_goals']}, step=step)
+    wandb.log({'Perf/Block_accuracy': performance_dict['per_block_acc']}, step=step)
+    wandb.log({'Perf/Max_goals': performance_dict['per_max_goals']}, step=step)
+    wandb.log({'Perf/Num_dynamic_collide': performance_dict['per_num_dynamic_collide']},
+              step=step)
+    wandb.log({'Perf/Num_agent_collide': performance_dict['per_num_agent_collide']},
+              step=step)
+    wandb.log({'Perf/Ep_global_collision': performance_dict["episode_global_collision"]},
+              step=step)
+    wandb.log({'Perf/Num_update': performance_dict['per_num_update_path']},
+              step=step)
+    wandb.log({'Perf/Reduced_collision': performance_dict["per_reduced_collide"]},
+              step=step)
 
-    else:
-        loss_vals = np.nanmean(mb_loss, axis=0)
-        wandb.log({'Perf/Reward': performance_dict['per_r']}, step=step)
-        wandb.log({'Perf/Valid_rate': performance_dict['per_valid_rate']}, step=step)
-        wandb.log({'Perf/Episode_length': performance_dict['per_episode_len']}, step=step)
-        wandb.log({'Perf/Num_block': performance_dict['per_block']}, step=step)
-        wandb.log({'Perf/Num_leave_goal': performance_dict['per_leave_goal']}, step=step)
-        wandb.log({'Perf/Final_goals': performance_dict['per_final_goals']}, step=step)
-        wandb.log({'Perf/Half_goals': performance_dict['per_half_goals']}, step=step)
-        wandb.log({'Perf/Block_accuracy': performance_dict['per_block_acc']}, step=step)
-        wandb.log({'Perf/Max_goals': performance_dict['per_max_goals']}, step=step)
-        wandb.log({'Perf/Num_dynamic_collide': performance_dict['per_num_dynamic_collide']},
-                  step=step)
-        wandb.log({'Perf/Num_agent_collide': performance_dict['per_num_agent_collide']},
-                  step=step)
-        wandb.log({'Perf/Ep_global_collision': performance_dict["episode_global_collision"]},
-                  step=step)
-
-        for (val, name) in zip(loss_vals, RecordingParameters.LOSS_NAME):
-            if name == 'grad_norm':
-                wandb.log({'Grad/' + name: val}, step=step)
-            else:
-                wandb.log({'Loss/' + name: val}, step=step)
+    for (val, name) in zip(loss_vals, RecordingParameters.LOSS_NAME):
+        if name == 'grad_norm':
+            wandb.log({'Grad/' + name: val}, step=step)
+        else:
+            wandb.log({'Loss/' + name: val}, step=step)
 
 
 def make_gif(images, file_name):
     """record gif"""
     imageio.mimwrite(file_name, images, subrectangles=True)
     print("wrote gif")
-
-def local_reset_env(env,local_num_agents,local_succ,first_time, ALNS):
-    global_done,destroy_weights,global_num_collison, makespan=env._local_reset(local_num_agents, local_succ, first_time, ALNS)
-    if global_done:
-        assert (global_num_collison==0)
-        return True,destroy_weights,global_num_collison,False,0,0,0,0, makespan
-
-    local_done=False
-    prev_action = np.zeros(EnvParameters.LOCAL_N_AGENTS)
-    valid_actions = []
-    obs = np.zeros((1, EnvParameters.LOCAL_N_AGENTS, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE, EnvParameters.FOV_SIZE),
-                   dtype=np.float32)
-    vector = np.zeros((1, EnvParameters.LOCAL_N_AGENTS, NetParameters.VECTOR_LEN), dtype=np.float32)
-    train_valid = np.zeros((EnvParameters.LOCAL_N_AGENTS, EnvParameters.N_ACTIONS), dtype=np.float32)
-
-    for i in range(EnvParameters.LOCAL_N_AGENTS):
-        valid_action = env.list_next_valid_actions(i)
-        s = env.observe(i)
-        obs[:, i, :, :, :] = s[0]
-        vector[:, i, : 3] = s[1]
-        vector[:, i, -1] = prev_action[i]
-        valid_actions.append(valid_action)
-        train_valid[i, valid_action] = 1
-    return global_done,destroy_weights,global_num_collison,local_done, valid_actions, obs, vector, train_valid, makespan
-
-def global_reset_env(env):
-    """reset environment"""
-    can_not_use=True
-    while can_not_use:
-        can_not_use, global_num_collision = env._global_reset()
-    return global_num_collision
-
-def one_step(env, one_episode_perf, actions, pre_block):
-    """run one step"""
-    train_valid = np.zeros((EnvParameters.LOCAL_N_AGENTS, EnvParameters.N_ACTIONS), dtype=np.float32)
-
-    obs, vector, rewards, done, next_valid_actions,  blockings, num_blockings, leave_goals, \
-        num_on_goal, max_on_goal, num_dynamic_collide, num_agent_collide \
-        = env.joint_step(actions)
-
-    one_episode_perf['block'] += num_blockings
-    one_episode_perf['num_leave_goal'] += leave_goals
-    one_episode_perf['num_dynamic_collide'] += num_dynamic_collide
-    one_episode_perf['num_agent_collide'] += num_agent_collide
-
-    for i in range(EnvParameters.LOCAL_N_AGENTS):
-        train_valid[i, next_valid_actions[i]] = 1
-        if (pre_block[i] < 0.5) == blockings[:, i]:
-            one_episode_perf['wrong_blocking'] += 1
-    one_episode_perf['num_step'] += 1
-    return rewards, next_valid_actions, obs, vector, train_valid, done, blockings, num_on_goal, one_episode_perf, \
-        max_on_goal
 
 
 def update_perf(one_episode_perf, performance_dict, num_on_goals, max_on_goals):
@@ -155,3 +80,92 @@ def update_perf(one_episode_perf, performance_dict, num_on_goals, max_on_goals):
                 one_episode_perf['num_step'] * EnvParameters.LOCAL_N_AGENTS))
     performance_dict['per_max_goals'].append(max_on_goals)
     return performance_dict
+
+
+def init_performance_dict_driver():
+    performance_dict = {'per_r': [], 'per_valid_rate': [],
+                        'per_episode_len': [], 'per_block': [],
+                        'per_leave_goal': [], 'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
+                        'per_max_goals': [], 'per_num_dynamic_collide': [], 'per_num_agent_collide': [],
+                        "episode_global_collision": [],
+                        'per_num_update_path': [], 'per_reduced_collide': []}
+    return performance_dict
+
+
+def init_performance_dict_runner():
+    performance_dict = {'per_r': [], 'per_valid_rate': [],
+                        'per_episode_len': [], 'per_block': [],
+                        'per_leave_goal': [], 'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
+                        'per_max_goals': [], 'per_num_dynamic_collide': [], 'per_num_agent_collide': [],
+                        "episode_global_collision": [],
+                        'per_num_update_path': 0, 'per_reduced_collide': 0}
+    return performance_dict
+
+
+def init_global_perf():
+    global_perf = {"success_time": 0, "num_iteration": [],
+                   "task_global_collision": [], "destroy_weight_target": [],
+                   "destroy_weight_collision": [], "destroy_weight_random": [], "makespan": []}
+    return global_perf
+
+
+def init_one_episode_perf():
+    one_episode_perf = {'num_step': 0, 'reward': 0, 'invalid': 0, 'block': 0, 'num_leave_goal': 0,
+                        'wrong_blocking': 0, 'num_dynamic_collide': 0, "num_agent_collide": 0}
+    return one_episode_perf
+
+def eval_init_global_perf():
+    global_perf_100, global_perf_200, global_perf_300, global_perf_400 = {}, {}, {}, {},
+    dict_set = [global_perf_100, global_perf_200, global_perf_300, global_perf_400]
+    item_name = ["success_time", "global_collision", "num_update", "makespan"]
+    for dict_name in dict_set:
+        for item in item_name:
+            dict_name[item] = 0
+    return dict_set
+
+def write_to_wandb_global(step, performance_dict,global_performance_dict):
+
+    wandb.log({'Perf_global_eval/Reward': np.nanmean(performance_dict['reward'])}, step=step)
+    wandb.log({'Perf_global_eval/Invalid': np.nanmean(performance_dict['invalid'])}, step=step)
+    wandb.log({'Perf_global_eval/Episode_length': np.nanmean(performance_dict['num_step'])}, step=step)
+    wandb.log({'Perf_global_eval/Num_block': np.nanmean(performance_dict['block'])}, step=step)
+    wandb.log({'Perf_global_eval/Final_goals': np.nanmean(performance_dict['final_goal'])}, step=step)
+    wandb.log({'Perf_global_eval/Num_dynamic_collide': np.nanmean(performance_dict['num_dynamic_collide'])},
+              step=step)
+    wandb.log({'Perf_global_eval/Num_agent_collide': np.nanmean(performance_dict['num_agent_collide'])},
+              step=step)
+    wandb.log({'Perf_global_eval/Reduced_collision': np.nanmean(performance_dict["reduced_collision"])},step=step)
+
+    wandb.log({'Perf_100/Success': global_performance_dict[0]["success_time"]}, step=step)
+    wandb.log({'Perf_100/Global_collision': global_performance_dict[0]["global_collision"]}, step=step)
+    wandb.log({'Perf_100/Num_update': global_performance_dict[0]["num_update"]}, step=step)
+    wandb.log({'Perf_100/Makespan': global_performance_dict[0]["makespan"]}, step=step)
+
+    wandb.log({'Perf_200/Success': global_performance_dict[1]["success_time"]}, step=step)
+    wandb.log({'Perf_200/Global_collision': global_performance_dict[1]["global_collision"]}, step=step)
+    wandb.log({'Perf_200/Num_update': global_performance_dict[1]["num_update"]}, step=step)
+    wandb.log({'Perf_200/Makespan': global_performance_dict[1]["makespan"]}, step=step)
+
+    wandb.log({'Perf_300/Success': global_performance_dict[2]["success_time"]}, step=step)
+    wandb.log({'Perf_300/Global_collision': global_performance_dict[2]["global_collision"]}, step=step)
+    wandb.log({'Perf_300/Num_update': global_performance_dict[2]["num_update"]}, step=step)
+    wandb.log({'Perf_300/Makespan': global_performance_dict[2]["makespan"]}, step=step)
+
+    wandb.log({'Perf_400/Success': global_performance_dict[3]["success_time"]}, step=step)
+    wandb.log({'Perf_400/Global_collision': global_performance_dict[3]["global_collision"]}, step=step)
+    wandb.log({'Perf_400/Num_update': global_performance_dict[3]["num_update"]}, step=step)
+    wandb.log({'Perf_400/Makespan': global_performance_dict[3]["makespan"]}, step=step)
+
+def write_to_wandb_scalar(step, performance_dict):
+    wandb.log({'Perf_scalar/Reward': performance_dict['reward']}, step=step)
+    wandb.log({'Perf_scalar/Invalid': performance_dict['invalid']}, step=step)
+    wandb.log({'Perf_scalar/Episode_length': performance_dict['num_step']}, step=step)
+    wandb.log({'Perf_scalar/Num_block': performance_dict['block']}, step=step)
+    wandb.log({'Perf_scalar/Final_goals': performance_dict['final_goal']}, step=step)
+    wandb.log({'Perf_scalar/Num_dynamic_collide': performance_dict['num_dynamic_collide']},
+              step=step)
+    wandb.log({'Perf_scalar/Num_agent_collide': performance_dict['num_agent_collide']},
+              step=step)
+    wandb.log({'Perf_scalar/Reduced_collision': performance_dict["reduced_collison"]},step=step)
+
+

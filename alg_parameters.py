@@ -13,9 +13,15 @@ class EnvParameters:
     OBSTACLE_PROB = (0.0, 0.3)
     ACTION_COST = -0.3
     IDLE_COST = -0.3
+    MOVE_BACK_COST=-0.4
     GOAL_REWARD = 0.0
-    COLLISION_COST = -2
+    DY_COLLISION_COST = -1
+    AG_COLLISION_COST = -1.7
     BLOCKING_COST = -1
+    NUM_TIME_SLICE=6
+    WINDOWS=15
+    OFF_ROUTE_FACTOR=0.05
+    DIS_FACTOR = 0.2
 
 
 class TrainingParameters:
@@ -31,18 +37,23 @@ class TrainingParameters:
     BLOCK_COEF = 0.5
     N_EPOCHS = 10
     N_ENVS = 16  # number of processes
-    N_MAX_STEPS = 5e7  # maximum number of time steps used in training
+    N_MAX_STEPS = 6e7  # maximum number of time steps used in training
     N_STEPS = 2 ** 10  # number of time steps per process per data collection
-    MINIBATCH_SIZE = int(2 ** 10)
+    MINIBATCH_SIZE = int(2 ** 10) #int(2 ** 10)
     Destroy_factor=0.05
-    ITERATION_LIMIT=80
+    ITERATION_LIMIT=800
+    opti_eps=1e-5
+    huber_delta=10
+    weight_decay=0
 
+    DEMONSTRATION_PROB = 0.2
 
 class NetParameters:
     NET_SIZE = 512
-    NUM_CHANNEL = 10  # number of channels of observations -[FOV_SIZE x FOV_SIZEx NUM_CHANNEL]
+    NUM_CHANNEL = 15  # number of channels of observations -[FOV_SIZE x FOV_SIZEx NUM_CHANNEL]
     GOAL_REPR_SIZE = 12
     VECTOR_LEN = 4 # [dx, dy, d total, action t-1]
+    GAIN=0.01
 
 
 class SetupParameters:
@@ -54,20 +65,27 @@ class SetupParameters:
 
 class RecordingParameters:
     RETRAIN = False
-    WANDB =  True
-    ENTITY = 'yutong'
+    WANDB = True
+    ENTITY = 'ayush_ishan'
     TIME = datetime.datetime.now().strftime('%d-%m-%y%H%M')
-    EXPERIMENT_PROJECT = 'MAPF'
-    EXPERIMENT_NAME = 'LNS2+RL_allow_collision'
-    EXPERIMENT_NOTE = ''
-    SAVE_INTERVAL = 2e6  # interval of saving model
+    EXPERIMENT_PROJECT = 'MAPF_LNS2-MARL'
+    EXPERIMENT_NAME = 'mappo_new_frame_EECBS'
+    EXPERIMENT_NOTE = 'timeslice, allow_collision, collision penalty=1,1.7, remove back action from mask and train it by penalty=-0.4,' \
+                      'add off-rout rewards based on sipps+pp, time_windows=15, added corresponding SIPPS as input of the whole net, add reward shaping, modified reward structure,' \
+                      'express the number of ' \
+                      'dynamic obstacles and agents in the obs, penalty*num_collision, use new training framework, add tricks in mappo'
+    SAVE_INTERVAL = TrainingParameters.N_ENVS * TrainingParameters.N_STEPS*100  # interval of saving model
     GLOBAL_INTERVAL=5
     GRAD_LOGFREQ=1000
-    EVAL=False
+    EVAL=True
     BEST_INTERVAL = 0  # interval of saving model with the best performance
     GIF_INTERVAL = 1e6  # interval of saving gif
-    EVAL_INTERVAL = TrainingParameters.N_ENVS * TrainingParameters.N_STEPS  # interval of evaluating training model0
+    EVAL_INTERVAL_SCALA = SAVE_INTERVAL
+    EVAL_INTERVAL_GLOBAL = SAVE_INTERVAL*4  # interval of evaluating training model0
     EVAL_EPISODES = 1  # number of episode used in evaluation
+    EVAL_MAX_ITERATION=400
+    EVAL_NUM_AGENT_GLOBAL = 8
+    EVAL_NUM_AGENT=64
     RECORD_BEST = False
     MODEL_PATH = './models' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
     GIFS_PATH = './gifs' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
@@ -77,14 +95,15 @@ class RecordingParameters:
 
 
 all_args = {'LOCAL_N_AGENTS': EnvParameters.LOCAL_N_AGENTS, "GLOBAL_N_AGENT":EnvParameters.GLOBAL_N_AGENT,
-            'N_ACTIONS': EnvParameters.N_ACTIONS,
+            'N_ACTIONS': EnvParameters.N_ACTIONS,'DIS_FACTOR':EnvParameters.DIS_FACTOR,
             'EPISODE_LEN': EnvParameters.EPISODE_LEN, 'FOV_SIZE': EnvParameters.FOV_SIZE,
             'WORLD_SIZE': EnvParameters.WORLD_SIZE,
             'OBSTACLE_PROB': EnvParameters.OBSTACLE_PROB,
             'ACTION_COST': EnvParameters.ACTION_COST,
             'IDLE_COST': EnvParameters.IDLE_COST, 'GOAL_REWARD': EnvParameters.GOAL_REWARD,
-            'COLLISION_COST': EnvParameters.COLLISION_COST,
-            'BLOCKING_COST': EnvParameters.BLOCKING_COST,
+            'AG_COLLISION_COST': EnvParameters.AG_COLLISION_COST,
+            'DY_COLLISION_COST': EnvParameters.DY_COLLISION_COST,
+            'BLOCKING_COST': EnvParameters.BLOCKING_COST,'NUM_TIME_SLICE':EnvParameters.NUM_TIME_SLICE,
             'lr': TrainingParameters.lr, 'GAMMA': TrainingParameters.GAMMA, 'LAM': TrainingParameters.LAM,
             'CLIPRANGE': TrainingParameters.CLIP_RANGE, 'MAX_GRAD_NORM': TrainingParameters.MAX_GRAD_NORM,
             'ENTROPY_COEF': TrainingParameters.ENTROPY_COEF,
@@ -106,7 +125,7 @@ all_args = {'LOCAL_N_AGENTS': EnvParameters.LOCAL_N_AGENTS, "GLOBAL_N_AGENT":Env
             'EXPERIMENT_NAME': RecordingParameters.EXPERIMENT_NAME,
             'EXPERIMENT_NOTE': RecordingParameters.EXPERIMENT_NOTE,
             'SAVE_INTERVAL': RecordingParameters.SAVE_INTERVAL,"EVAL":RecordingParameters.EVAL, "BEST_INTERVAL": RecordingParameters.BEST_INTERVAL,
-            'GIF_INTERVAL': RecordingParameters.GIF_INTERVAL, 'EVAL_INTERVAL': RecordingParameters.EVAL_INTERVAL,
+            'GIF_INTERVAL': RecordingParameters.GIF_INTERVAL, 'EVAL_INTERVAL_SCALA': RecordingParameters.EVAL_INTERVAL_SCALA,'EVAL_INTERVAL_GLOBAL': RecordingParameters.EVAL_INTERVAL_GLOBAL,
             'EVAL_EPISODES': RecordingParameters.EVAL_EPISODES, 'RECORD_BEST': RecordingParameters.RECORD_BEST,
             'MODEL_PATH': RecordingParameters.MODEL_PATH, 'GIFS_PATH': RecordingParameters.GIFS_PATH}
 
