@@ -17,38 +17,6 @@ void PathTableWC::insertPath(int agent_id, const Path& path)
     makespan = max(makespan, (int) path.size() - 1);
 }
 
-void PathTableWC::deletePath(int agent_id)
-{
-    const Path & path = *paths[agent_id];
-    if (path.empty())
-        return;
-    for (int t = 0; t < (int)path.size(); t++)
-    {
-        assert(table[path[t].location].size() > t &&
-               std::find (table[path[t].location][t].begin(), table[path[t].location][t].end(), agent_id)
-               != table[path[t].location][t].end());
-        table[path[t].location][t].remove(agent_id);
-    }
-    goals[path.back().location] = MAX_TIMESTEP;
-    if (makespan == (int) path.size() - 1) // re-compute makespan
-    {
-        makespan = 0;
-        for (int time : goals)
-        {
-            if (time < MAX_TIMESTEP && time > makespan)
-                makespan = time;
-        }
-
-    }
-}
-
-void PathTableWC::clear()
-{
-    table.clear();
-    goals.clear();
-    paths.clear();
-}
-
 int PathTableWC::getFutureNumOfCollisions(int loc, int time) const
 {
     assert(goals[loc] == MAX_TIMESTEP);
@@ -88,4 +56,3 @@ int PathTableWC::getLastCollisionTimestep(int location) const
     }
     return -1;
 }
-

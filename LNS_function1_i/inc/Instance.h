@@ -14,9 +14,7 @@ public:
     int num_of_agents;
 
 	Instance()=default;
-    Instance(const string& map_fname, const string& agent_fname,
-             int num_of_agents);
-
+    Instance(const string& map_fname, const string& agent_fname,int num_of_agents);
 
     inline bool validMove(int curr, int next) const
     {
@@ -26,7 +24,6 @@ public:
             return false;
         return getManhattanDistance(curr, next) < 2;  // if one step
     }
-    list<int> getNeighbors(int curr) const;  // valid moveable true neigbor
 
     inline int linearizeCoordinate(int row, int col) const { return ( this->num_of_cols * row + col); }  // x-y map to one dimension
     inline int getRowCoordinate(int id) const { return id / this->num_of_cols; }
@@ -42,15 +39,16 @@ public:
         return abs(loc1_x - loc2_x) + abs(loc1_y - loc2_y);
     }
 
-    bool validateSolution(const vector<Path*>& paths, int sum_of_costs, int num_of_colliding_pairs) const;
+    list<int> getNeighbors(int curr) const;
+
 private:
 	  // int moves_offset[MOVE_COUNT];
 	  vector<bool> my_map;
       string map_fname;
       string agent_fname;
 
-      bool loadMap();
-      bool loadAgents();
+	  bool loadMap();
+	  bool loadAgents();
 
 	  // Class  SingleAgentSolver can access private members of Node 
 	  friend class SingleAgentSolver;
