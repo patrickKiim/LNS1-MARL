@@ -21,13 +21,7 @@ bool PP::run()
     sum_of_costs = 0;
     for (int i = 0; i < (int)agents.size(); i++)
     {
-        if (!agents[i].path.empty())
-        {
-            cerr << "agent already has path"  << endl;
-            exit(-1);
-        }
-        else
-            neighbor.agents.push_back(i);
+        neighbor.agents.push_back(i);
     }
     int remaining_agents = (int)neighbor.agents.size();
     std::random_shuffle(neighbor.agents.begin(), neighbor.agents.end());

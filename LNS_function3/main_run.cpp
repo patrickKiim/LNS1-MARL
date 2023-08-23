@@ -29,14 +29,7 @@ int main(int argc, char** argv)
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
 
-    if (vm.count("help")) {
-        cout << desc << endl;
-        return 1;
-    }
-
     po::notify(vm);
-
-    srand((int)time(0));
 
     Check Check(vm["paths"].as<string>(),vm["map"].as<int>(),vm["number"].as<int>());
     int num_collision=Check.calculate_collision(); //succ if the input path already done

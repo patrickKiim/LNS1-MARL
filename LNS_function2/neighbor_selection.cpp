@@ -34,6 +34,7 @@ path_table(instance.map_size, num_agents),old_selected_neighbor(old_selected_nei
         cerr << "Init Destroy heuristic " << init_destory_name << " does not exists. " << endl;
         exit(-1);
     }
+    num_collision.assign(neighbor_size,0);
 
 }
 
@@ -187,7 +188,68 @@ vector<vector<pair<int,int>>> Selection::runPP()
         a++;
         ++p;
     }
+    auto local_p = shuffled_agents.begin();
+    int i=0;
+    while (local_p != shuffled_agents.end())
+    {   int local_id = *local_p;
+        calculateColliding(local_id,i,agents[local_id].path);
+        ++local_p;
+        i++;
+    }
     return temp;
+}
+
+void Selection::calculateColliding(int agent_id, int local_agent_id, const Path& path)
+{
+    for (int t = 1; t < (int)path.size(); t++)
+    {
+        int from = path[t - 1].location;
+        int to = path[t].location;
+        if ((int)path_table.table[to].size() > t) // vertex conflicts
+        {
+            for (auto id : path_table.table[to][t])
+            {   if (id!= agent_id)
+                    num_collision[local_agent_id]+=1;// emplace: insert new element into set
+            }
+        }
+        if (from != to && path_table.table[to].size() >= t && path_table.table[from].size() > t) // edge conflicts(swapping conflicts)
+        {
+            for (auto a1 : path_table.table[to][t - 1])
+            {
+                for (auto a2: path_table.table[from][t])
+                {
+                    if (a1 == a2 and a1!=agent_id)
+                    {
+                        num_collision[local_agent_id]+=1;
+                        break;
+                    }
+                }
+            }
+        }
+        //auto id = getAgentWithTarget(to, t);
+        //if (id >= 0) // this agent traverses the target of another agent
+        //    colliding_pairs.emplace(min(agent_id, id), max(agent_id, id));
+        if (!path_table.goals.empty() && path_table.goals[to] < t) // target conflicts, already has agent in its goal, so the new agent can not tarverse it
+        { // this agent traverses the target of another agent
+            for (auto id : path_table.table[to][path_table.goals[to]]) // look at all agents at the goal time
+            {
+                if (agents[id].path.back().location == to) // if agent id's goal is to, then this is the agent we want
+                {   if (id!= agent_id)
+                    {   num_collision[local_agent_id]+=1;
+                        break;}
+                }
+            }
+        }
+    }
+    int goal = path.back().location; // target conflicts - some other agent traverses the target of this agent
+    for (int t = (int)path.size(); t < path_table.table[goal].size(); t++)
+    {
+        for (auto id : path_table.table[goal][t])
+        {
+            if (id!= agent_id)
+                num_collision[local_agent_id]+=1;
+        }
+    }
 }
 
 

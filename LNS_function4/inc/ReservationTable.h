@@ -21,7 +21,6 @@ private:
 	// Safe Interval Table (SIT)
 	typedef vector< list<Interval> > SIT;
     SIT sit; // location -> [t_min, t_max), num_of_collisions
-    void insert2SIT(int location, int t_min, int t_max);
     void insertSoftConstraint2SIT(int location, int t_min, int t_max);
 	// void mergeIntervals(list<Interval >& intervals) const;
 	void updateSIT(int location); // update SIT at the given location

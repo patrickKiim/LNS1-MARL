@@ -22,7 +22,7 @@ class Eval(object):
             num_iteration =total_update=0
             first_time=True
 
-            _,global_num_collison = self.global_env._global_reset()
+            _,global_num_collison = self.global_env._global_reset(-1)
             while num_iteration <= RecordingParameters.EVAL_MAX_ITERATION:
                 num_iteration+=1
                 hidden_state = (
@@ -66,9 +66,8 @@ class Eval(object):
         with torch.no_grad():
             recording = {'num_step': 0, 'reward': 0, 'invalid': 0, 'block': 0, 'num_dynamic_collide': 0, "num_agent_collide": 0,
                          "reduced_collison":0,"final_goal":0}
-            _, global_num_collison = self.scalar_env._global_reset()
+            _, global_num_collison = self.scalar_env._global_reset(-1)
             self.scalar_env._local_reset(RecordingParameters.EVAL_NUM_AGENT, True,True)
-            prev_action = np.zeros(RecordingParameters.EVAL_NUM_AGENT)
             valid_actions = []
             obs = np.zeros((1, RecordingParameters.EVAL_NUM_AGENT, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE,
                             EnvParameters.FOV_SIZE),
@@ -80,7 +79,6 @@ class Eval(object):
                 s = self.scalar_env.observe(i)
                 obs[:, i, :, :, :] = s[0]
                 vector[:, i, : 3] = s[1]
-                vector[:, i, -1] = prev_action[i]
                 valid_actions.append(valid_action)
             hidden_state = (
                 torch.zeros((RecordingParameters.EVAL_NUM_AGENT, NetParameters.NET_SIZE)).to(
@@ -103,7 +101,7 @@ class Eval(object):
                 recording['invalid'] += num_invalid
                 recording['reward'] += np.sum(rewards)
 
-            _,_,_,_,_,reduced_collison,_=self.scalar_env._local_reset(RecordingParameters.EVAL_NUM_AGENT, False, True)
+            _,_,_,_,_,reduced_collison=self.scalar_env._local_reset(RecordingParameters.EVAL_NUM_AGENT, False, True)
 
             recording["reduced_collison"]=reduced_collison
             recording["final_goal"]=num_on_goal
@@ -141,14 +139,13 @@ class Eval(object):
                 self.dict_set[record_number]["makespan"] = makespan
 
     def local_reset_env(self,local_num_agents,first_time, ALNS):
-        global_done, _, global_num_collison, makespan, num_update_path, reduced_collison,_ = self.global_env._local_reset(
+        global_done, _, global_num_collison, makespan, num_update_path, reduced_collison = self.global_env._local_reset(
         local_num_agents, first_time, ALNS)
 
         if global_done:
             assert (global_num_collison == 0)
             return True, global_num_collison, False, 0, 0, 0, makespan, num_update_path, reduced_collison
 
-        prev_action = np.zeros(local_num_agents)
         valid_actions = []
         obs = np.zeros((1, local_num_agents, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE,
                         EnvParameters.FOV_SIZE),
@@ -160,7 +157,6 @@ class Eval(object):
             s = self.global_env.observe(i)
             obs[:, i, :, :, :] = s[0]
             vector[:, i, : 3] = s[1]
-            vector[:, i, -1] = prev_action[i]
             valid_actions.append(valid_action)
         return global_done, global_num_collison, False, valid_actions, obs, vector, makespan, num_update_path, reduced_collison
 

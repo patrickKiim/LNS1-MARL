@@ -3,14 +3,14 @@ import datetime
 """ Hyperparameters"""
 
 
-class EnvParameters:
-    LOCAL_N_AGENTS = 8  # number of agents used in training
-    GLOBAL_N_AGENT=(400,600)  # 300: pp CAN NOT SOLVE (300,500)
+class EnvParameters:  # (0.00625,0.125),( 0.01234,0.176),(0.02,0.26),(0.03,0.39),(0.069,0.48),(0.11,0.675)
+    LOCAL_N_AGENTS_LIST = [4,6,8,8,8,8]  # number of agents used in training
+    GLOBAL_N_AGENT_LIST=[30,60,100,200,300,400]  # 300: pp CAN NOT SOLVE (300,500)
     N_ACTIONS = 5
     EPISODE_LEN = 356  # maximum episode length in training
     FOV_SIZE = 9
-    WORLD_SIZE = (40, 60)
-    OBSTACLE_PROB = (0.0, 0.3)
+    WORLD_SIZE_LIST = [15,20,25,30,35,40] # 0.1,0.16,0.225,0.298,0.36,0.415
+    OBSTACLE_PROB_LIST = [0.02,0.04,0.07,0.1,0.15,0.2]
     ACTION_COST = -0.3
     IDLE_COST = -0.3
     MOVE_BACK_COST=-0.4
@@ -22,6 +22,8 @@ class EnvParameters:
     WINDOWS=15
     OFF_ROUTE_FACTOR=0.05
     DIS_FACTOR = 0.2
+    SWEITCH_TIMESTEP=[1e6,2e6,3e6,6e6,1e7]
+    INFLATION=10
 
 
 class TrainingParameters:
@@ -39,20 +41,19 @@ class TrainingParameters:
     N_ENVS = 16  # number of processes
     N_MAX_STEPS = 6e7  # maximum number of time steps used in training
     N_STEPS = 2 ** 10  # number of time steps per process per data collection
-    MINIBATCH_SIZE = int(2 ** 10) #int(2 ** 10)
+    MINIBATCH_SIZE =int(2**10)#int(2 ** 10) #int(2 ** 10)
     Destroy_factor=0.05
-    ITERATION_LIMIT=800
+    ITERATION_LIMIT_LIST=[5,20,50,600,800,900]
     opti_eps=1e-5
     huber_delta=10
     weight_decay=0
 
-    DEMONSTRATION_PROB = 0.2
 
 class NetParameters:
     NET_SIZE = 512
     NUM_CHANNEL = 15  # number of channels of observations -[FOV_SIZE x FOV_SIZEx NUM_CHANNEL]
     GOAL_REPR_SIZE = 12
-    VECTOR_LEN = 4 # [dx, dy, d total, action t-1]
+    VECTOR_LEN = 9 # [dx, dy, d,self collsion ratio, total collsion ration,step vs episode length, step vs makespan, ratio of current reached goal, old action]
     GAIN=0.01
 
 
@@ -66,18 +67,19 @@ class SetupParameters:
 class RecordingParameters:
     RETRAIN = False
     WANDB = True
-    ENTITY = 'ayush_ishan'
+    ENTITY = 'yutong'
     TIME = datetime.datetime.now().strftime('%d-%m-%y%H%M')
-    EXPERIMENT_PROJECT = 'MAPF_LNS2-MARL'
-    EXPERIMENT_NAME = 'mappo_new_frame_EECBS'
+    EXPERIMENT_PROJECT = 'MAPF'
+    EXPERIMENT_NAME = 'sipps_block_individual_if_better_moreinfo'
     EXPERIMENT_NOTE = 'timeslice, allow_collision, collision penalty=1,1.7, remove back action from mask and train it by penalty=-0.4,' \
                       'add off-rout rewards based on sipps+pp, time_windows=15, added corresponding SIPPS as input of the whole net, add reward shaping, modified reward structure,' \
                       'express the number of ' \
-                      'dynamic obstacles and agents in the obs, penalty*num_collision, use new training framework, add tricks in mappo'
+                      'dynamic obstacles and agents in the obs, penalty*num_collision, use new training framework, add tricks in mappo, curriculum learning based on time step,' \
+                      'give distance penalty only when individual policy fail, add more global info eg:step vs episode length, ratio of current reached goal'
     SAVE_INTERVAL = TrainingParameters.N_ENVS * TrainingParameters.N_STEPS*100  # interval of saving model
     GLOBAL_INTERVAL=5
     GRAD_LOGFREQ=1000
-    EVAL=True
+    EVAL=False
     BEST_INTERVAL = 0  # interval of saving model with the best performance
     GIF_INTERVAL = 1e6  # interval of saving gif
     EVAL_INTERVAL_SCALA = SAVE_INTERVAL
@@ -91,14 +93,13 @@ class RecordingParameters:
     GIFS_PATH = './gifs' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
     LOSS_NAME = ['all_loss', 'policy_loss', 'policy_entropy', 'critic_loss', 'valid_loss',
                  'blocking_loss', 'clipfrac',
-                 'grad_norm', 'advantage']
+                 'grad_norm', 'advantage',"prop_policy","prop_en","prop_v","prop_valid","prop_block"]
 
-
-all_args = {'LOCAL_N_AGENTS': EnvParameters.LOCAL_N_AGENTS, "GLOBAL_N_AGENT":EnvParameters.GLOBAL_N_AGENT,
+all_args = {'LOCAL_N_AGENTS': EnvParameters.LOCAL_N_AGENTS_LIST, "GLOBAL_N_AGENT":EnvParameters.GLOBAL_N_AGENT_LIST,
             'N_ACTIONS': EnvParameters.N_ACTIONS,'DIS_FACTOR':EnvParameters.DIS_FACTOR,
             'EPISODE_LEN': EnvParameters.EPISODE_LEN, 'FOV_SIZE': EnvParameters.FOV_SIZE,
-            'WORLD_SIZE': EnvParameters.WORLD_SIZE,
-            'OBSTACLE_PROB': EnvParameters.OBSTACLE_PROB,
+            'WORLD_SIZE': EnvParameters.WORLD_SIZE_LIST,
+            'OBSTACLE_PROB': EnvParameters.OBSTACLE_PROB_LIST,
             'ACTION_COST': EnvParameters.ACTION_COST,
             'IDLE_COST': EnvParameters.IDLE_COST, 'GOAL_REWARD': EnvParameters.GOAL_REWARD,
             'AG_COLLISION_COST': EnvParameters.AG_COLLISION_COST,

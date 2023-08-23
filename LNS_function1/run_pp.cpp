@@ -28,15 +28,7 @@ int main(int argc, char** argv)
 //                ("number,n", po::value<int>()->default_value(460), "number of agents");
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
-
-        if (vm.count("help")) {
-            cout << desc << endl;
-            return 1;
-        }
-
         po::notify(vm);
-
-        srand((int)time(0));
 
         Instance instance(vm["map"].as<string>(), vm["agents"].as<string>(),
                           vm["number"].as<int>()); //map and relative operation, similar to environment

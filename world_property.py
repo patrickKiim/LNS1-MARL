@@ -1,8 +1,6 @@
 import copy
 import numpy as np
 from alg_parameters import *
-from od_mstar3 import od_mstar
-from od_mstar3.col_set_addition import NoSolutionError
 
 dirDict = {0: (0, 0), 1: (0, 1), 2: (1, 0), 3: (0, -1), 4: (-1, 0), 5: (1, 1), 6: (1, -1), 7: (-1, -1),
            8: (-1, 1)}  # x,y operation for corresponding action
@@ -115,7 +113,7 @@ class State(object):  # world property
                         if right not in open_list:
                             open_list.append(right)
 
-                self.heuri_map[a] = np.zeros((4, *self.state.shape), dtype=np.bool)
+                self.heuri_map[a] = np.zeros((4, *self.state.shape), dtype=bool)
 
                 for x in range(self.state.shape[0]):
                     for y in range(self.state.shape[1]):
@@ -135,55 +133,6 @@ class State(object):  # world property
                             if y < self.state.shape[1] - 1 and dist_map[ x, y + 1] < dist_map[ x, y]:
                                 assert dist_map[x, y + 1] == dist_map[x, y] - 1
                                 self.heuri_map[a][3, x, y] = 1
-
-    def astar(self, world, start, goal, robots):
-        """A* function for single agent"""
-        for (i, j) in robots:
-            world[i, j] = 1
-        try:
-            path = od_mstar.find_path(world, [start], [goal], inflation=1, time_limit=5)
-        except NoSolutionError:
-            path = None
-        for (i, j) in robots:
-            world[i, j] = 0
-        return path
-
-    def get_blocking_reward(self, local_agent_index):
-        """calculates how many agents are prevented from reaching goal and returns the blocking penalty"""
-        other_agents = []
-        other_locations = []
-        inflation = 10
-        top_left = (self.local_agents_poss[local_agent_index][0] - self.observation_size // 2,
-                    self.local_agents_poss[local_agent_index][1] - self.observation_size // 2)
-        bottom_right = (top_left[0] + self.observation_size, top_left[1] + self.observation_size)
-        for agent in range(self.local_num_agents):
-            if agent == local_agent_index:
-                continue
-            x, y = self.local_agents_poss[agent]
-            if x < top_left[0] or x >= bottom_right[0] or y >= bottom_right[1] or y < top_left[1]:
-                # exclude agent not in FOV
-                continue
-            other_agents.append(agent)
-            other_locations.append((x, y))
-
-        num_blocking = 0
-        world=(self.state == -1).astype(int)
-        for agent in other_agents:   # local agent index
-            other_locations.remove(self.local_agents_poss[agent])
-            path_before = self.astar(world, self.local_agents_poss[agent], self.local_agents_goal[agent],
-                                     robots=other_locations + [
-                                         self.local_agents_poss[local_agent_index]])
-            path_after = self.astar(world, self.local_agents_poss[agent], self.local_agents_goal[agent],
-                                    robots=other_locations)
-            other_locations.append(self.local_agents_poss[agent])
-            if path_before is None and path_after is None:
-                continue
-            if path_before is not None and path_after is None:
-                continue
-            if (path_before is None and path_after is not None) or (len(path_before) > len(path_after) + inflation):
-                num_blocking += 1
-
-        return num_blocking * EnvParameters.BLOCKING_COST, num_blocking
 
     def get_pos(self, agent_id):
         """agent's current position"""

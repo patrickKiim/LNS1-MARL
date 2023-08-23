@@ -12,10 +12,13 @@ public:
     vector<int> start_locations;
     vector<int> goal_locations;
     int num_of_agents;
+    int start;
+    int goal;
+    int self;
 
 	Instance()=default;
     Instance(const string& map_fname, const string& agent_fname,
-             int num_of_agents);
+             int num_of_agents,int start, int goal, int self);
 
 
     inline bool validMove(int curr, int next) const

@@ -25,19 +25,19 @@ class Model(object):
             # self.multi_gpu_net = torch.nn.DataParallel(self.network) # training on multiple GPU
             self.net_scaler = GradScaler()  # automatic mixed precision
 
-    def step(self, observation, vector, valid_action, input_state):
+    def step(self, observation, vector, valid_action, input_state,local_num_agent):
         """using neural network in training for prediction"""
         num_invalid = 0
         observation = torch.from_numpy(observation).to(self.device)
         vector = torch.from_numpy(vector).to(self.device)
         ps, v, block, _, output_state, _= self.network(observation, vector, input_state)
 
-        actions = np.zeros(EnvParameters.LOCAL_N_AGENTS)
+        actions = np.zeros(local_num_agent)
         ps = np.squeeze(ps.cpu().detach().numpy())
         v = v.cpu().detach().numpy()
         block = np.squeeze(block.cpu().detach().numpy())
 
-        for i in range(EnvParameters.LOCAL_N_AGENTS):
+        for i in range(local_num_agent):
             if np.argmax(ps[i], axis=-1) not in valid_action[i]:
                 num_invalid += 1
             # choose action from complete action distribution
@@ -65,13 +65,6 @@ class Model(object):
             actions[i] = valid_action[i][np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
         return actions,output_state, num_invalid
 
-    def generate_state(self, obs, vector, input_state):
-        """generate corresponding hidden states and messages in imitation learning"""
-        obs = torch.from_numpy(obs).to(self.device)
-        vector = torch.from_numpy(vector).to(self.device)
-        _, _, _, _, output_state, _ = self.network(obs, vector, input_state)
-        return output_state
-    
     def value(self, obs, vector, input_state):
         """using neural network to predict state values"""
         obs = torch.from_numpy(obs).to(self.device)
@@ -137,18 +130,9 @@ class Model(object):
                                          + (1 - target_blockings) * torch.log(torch.clamp(1 - block, 1e-6, 1.0 - 1e-6)))
 
             # total loss
-            try:
-                all_loss = -(1/observation.shape[0])*self.imitation_loss_val.detach_() + 10**(-3)*(- policy_loss - entropy * TrainingParameters.ENTROPY_COEF + \
-                    TrainingParameters.VALUE_COEF * critic_loss + TrainingParameters.VALID_COEF * valid_loss \
-                    + TrainingParameters.BLOCK_COEF * blocking_loss)
-            except:
-                all_loss = -policy_loss - entropy * TrainingParameters.ENTROPY_COEF + \
-                    TrainingParameters.VALUE_COEF * critic_loss + TrainingParameters.VALID_COEF * valid_loss \
-                    + TrainingParameters.BLOCK_COEF * blocking_loss
-                
-            # all_loss = -policy_loss - entropy * TrainingParameters.ENTROPY_COEF + \
-            #     TrainingParameters.VALUE_COEF * critic_loss + TrainingParameters.VALID_COEF * valid_loss \
-            #     + TrainingParameters.BLOCK_COEF * blocking_loss
+            all_loss = -policy_loss - entropy * TrainingParameters.ENTROPY_COEF + \
+                TrainingParameters.VALUE_COEF * critic_loss + TrainingParameters.VALID_COEF * valid_loss \
+                + TrainingParameters.BLOCK_COEF * blocking_loss
 
         clip_frac = torch.mean(torch.greater(torch.abs(ratio - 1.0), TrainingParameters.CLIP_RANGE).float())
 
@@ -160,6 +144,12 @@ class Model(object):
 
         self.net_scaler.step(self.net_optimizer)
         self.net_scaler.update()
+        # for recording
+        prop_policy=-policy_loss/ (all_loss+1e-6)
+        prop_en=-entropy * TrainingParameters.ENTROPY_COEF/ (all_loss+1e-6)
+        prop_v = TrainingParameters.VALUE_COEF * critic_loss / (all_loss+1e-6)
+        prop_valid = TrainingParameters.VALID_COEF * valid_loss / (all_loss+1e-6)
+        prop_block = TrainingParameters.BLOCK_COEF * blocking_loss/(all_loss+1e-6)
 
         stats_list = [all_loss.cpu().detach().numpy(), policy_loss.cpu().detach().numpy(),
                       entropy.cpu().detach().numpy(),
@@ -167,7 +157,11 @@ class Model(object):
                       valid_loss.cpu().detach().numpy(),
                       blocking_loss.cpu().detach().numpy(),
                       clip_frac.cpu().detach().numpy(), grad_norm.cpu().detach().numpy(),
-                      torch.mean(advantage).cpu().detach().numpy()]  # for recording
+                      torch.mean(advantage).cpu().detach().numpy(),prop_policy.cpu().detach().numpy(),
+                      prop_en.cpu().detach().numpy(),prop_v.cpu().detach().numpy(),prop_valid.cpu().detach().numpy(),
+                      prop_block.cpu().detach().numpy()]  # for recording
+
+        # eta
 
         return stats_list
 
@@ -212,34 +206,3 @@ class Model(object):
     #         eval_action[i] = valid_action[i][np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
     #
     #     return eval_action, output_state, v, ps
-
-    def imitation_train(self, observation, vector, optimal_action, input_state):
-        """train model0 by imitation learning"""
-        self.net_optimizer.zero_grad()
-
-        observation = torch.from_numpy(observation).to(self.device)
-        vector = torch.from_numpy(vector).to(self.device)
-        optimal_action = torch.from_numpy(optimal_action).to(self.device)
-        # print(input_state[:, 0].shape, input_state[:, 0].shape, input_state.shape)
-        input_state_h = torch.from_numpy(
-            np.reshape(input_state[:, 0], (-1, NetParameters.NET_SIZE))).to(self.device)
-        input_state_c = torch.from_numpy(
-            np.reshape(input_state[:, 1], (-1, NetParameters.NET_SIZE))).to(self.device)
-
-        input_state = (input_state_h, input_state_c)
-
-        with autocast():
-            _, _, _, _, _, logits = self.network(observation, vector, input_state)
-            logits = torch.swapaxes(logits, 1, 2)
-            self.imitation_loss = F.cross_entropy(logits, optimal_action)
-        # print(self.imitation_loss, optimal_action)
-
-        self.imitation_loss_val = self.imitation_loss
-        self.net_scaler.scale(self.imitation_loss).backward()
-        self.net_scaler.unscale_(self.net_optimizer)
-        # clip gradient
-        grad_norm = torch.nn.utils.clip_grad_norm_(self.network.parameters(), TrainingParameters.MAX_GRAD_NORM)
-        self.net_scaler.step(self.net_optimizer)
-        self.net_scaler.update()
-
-        return [self.imitation_loss.cpu().detach().numpy(), grad_norm.cpu().detach().numpy()]  # for recording

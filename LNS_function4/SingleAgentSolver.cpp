@@ -1,12 +1,4 @@
 #include "SingleAgentSolver.h"
-#include "SpaceTimeAStar.h"
-
-list<int> SingleAgentSolver::getNextLocations(int curr) const // including itself and its neighbors
-{
-	list<int> rst = instance.getNeighbors(curr);
-	rst.emplace_back(curr);
-	return rst;
-}
 
 
 void SingleAgentSolver::compute_heuristics()
@@ -32,18 +24,18 @@ void SingleAgentSolver::compute_heuristics()
 	my_heuristic.resize(instance.map_size, MAX_TIMESTEP);
 
 	// generate a heap that can save nodes (and a open_handle)
-	boost::heap::pairing_heap< Node, boost::heap::compare<Node::compare_node> > heap;
+	boost::heap::pairing_heap< Node, boost::heap::compare<Node::compare_node> > heap;  // define heap(root is the smallest) and the method use to sort heap
 
 	Node root(goal_location, 0);
-	my_heuristic[goal_location] = 0;
+	my_heuristic[goal_location] = 0;  // ture distance of path not distance between two node
 	heap.push(root);  // add root to heap
 	while (!heap.empty())
 	{
-		Node curr = heap.top();
-		heap.pop();
-		for (int next_location : instance.getNeighbors(curr.location))
+		Node curr = heap.top();  //Returns a const_reference to the maximum element.
+		heap.pop(); // Removes the top element from the priority queue.
+		for (int next_location : instance.getNeighbors(curr.location))  // for nex_location in neighbors(true neighbor)
 		{
-			if (my_heuristic[next_location] > curr.value + 1)
+			if (my_heuristic[next_location] > curr.value + 1)  // not assigned value
 			{
 				my_heuristic[next_location] = curr.value + 1;
 				Node next(next_location, curr.value + 1);
@@ -117,12 +109,12 @@ void SingleAgentSolver::findMinimumSetofColldingTargets(vector<int>& goal_table,
                 path.emplace_back(pt->location);
                 pt = pt->parent;
             }
-            std::reverse(path.begin(),path.end());
+            std::reverse(path.begin(),path.end());  // A* path of this agent
 
             for(auto& p : path)
             {
                 if (goal_table[p.location] > -1 && p.location != goal_location)
-                    A_target.insert(goal_table[p.location]);
+                    A_target.insert(goal_table[p.location]);  // this agent's goal has been visited by the A* path
             }
             break;
         }
@@ -171,3 +163,4 @@ std::ostream& operator<<(std::ostream& os, const LLNode& node)
     os << node.location << "@" << node.timestep << "(f=" << node.g_val << "+" << node.h_val << ")";
     return os;
 }
+

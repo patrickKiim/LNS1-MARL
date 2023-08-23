@@ -8,17 +8,17 @@ import numpy as np
 # from matplotlib.colors import hsv_to_rgb
 import math
 
-from my_lns2 import init_pp, adaptive_destroy,check_collision,single_sipps
+from my_lns2 import init_pp, calculate_sipps, single_sipps
 from world_property import State
 from alg_parameters import *
 opposite_actions = {0: -1, 1: 3, 2: 4, 3: 1, 4: 2, 5: 7, 6: 8, 7: 5, 8: 6}
 
-class MAPFEnv(gym.Env):
+class CL_MAPFEnv(gym.Env):
     """map MAPF problems to a standard RL environment"""
 
     metadata = {"render.modes": ["human", "ansi"]}
 
-    def __init__(self,env_id,eval=False,global_num_agents_range=EnvParameters.GLOBAL_N_AGENT_LIST, fov_size=EnvParameters.FOV_SIZE, size=EnvParameters.WORLD_SIZE_LIST,
+    def __init__(self,env_id,global_num_agents_range=EnvParameters.GLOBAL_N_AGENT_LIST, fov_size=EnvParameters.FOV_SIZE, size=EnvParameters.WORLD_SIZE_LIST,
                  prob=EnvParameters.OBSTACLE_PROB_LIST):
         """initialization"""
         self.global_num_agents_range = global_num_agents_range
@@ -26,7 +26,6 @@ class MAPFEnv(gym.Env):
         self.SIZE = size  # size of a side of the square grid
         self.PROB = prob  # obstacle density
         self.env_id=env_id
-        self.eval=eval
 
         self.viewer = None
 
@@ -59,79 +58,59 @@ class MAPFEnv(gym.Env):
             regions_dict[(x0, y0)] = visited
             return visited
 
-        if not self.eval:
-            prob = self.PROB[cl_num_task]  # sample a value from triangular distribution
-            size = self.SIZE[cl_num_task]  # sample a value according to the given probability
-            self.global_num_agent=int(self.global_num_agents_range[cl_num_task])
-            # prob = self.PROB
-            # size = self.SIZE  # fixed world0 size and obstacle density for evaluation
-            self.map = -(np.random.rand(int(size), int(size)) < prob).astype(int)  # -1 obstacle,0 nothing, >0 agent id
-            self.fix_state=copy.deepcopy(self.map)
-            self.fix_state_dict = {}
-            for i in range(int(size)):
-                for j in range(int(size)):
-                    self.fix_state_dict[i,j]=[]
+        prob = self.PROB[cl_num_task] # sample a value from triangular distribution
+        size =self.SIZE[cl_num_task]  # sample a value according to the given probability
+        self.global_num_agent=int(self.global_num_agents_range[cl_num_task])
+        self.map = -(np.random.rand(int(size), int(size)) < prob).astype(int)  # -1 obstacle,0 nothing, >0 agent id
+        self.fix_state=copy.deepcopy(self.map)
+        self.fix_state_dict = {}
+        for i in range(int(size)):
+            for j in range(int(size)):
+                self.fix_state_dict[i,j]=[]
 
-            # randomize the position of agents
-            agent_counter = 1
-            self.start_list = []
-            while agent_counter <= self.global_num_agent:
-                x, y = np.random.randint(0, size), np.random.randint(0, size)
-                if self.fix_state[x, y] == 0:
-                    self.fix_state[x, y] +=1
-                    self.fix_state_dict[x,y].append(agent_counter)
-                    self.start_list.append((x, y))
-                    agent_counter += 1
-            assert(sum(sum(self.fix_state)) == self.global_num_agent + sum(sum(self.map)))
+        # randomize the position of agents
+        agent_counter = 1
+        self.start_list = []
+        while agent_counter <= self.global_num_agent:
+            x, y = np.random.randint(0, size), np.random.randint(0, size)
+            if self.fix_state[x, y] == 0:
+                self.fix_state[x, y] +=1
+                self.fix_state_dict[x,y].append(agent_counter)
+                self.start_list.append((x, y))
+                agent_counter += 1
+        assert(sum(sum(self.fix_state)) == self.global_num_agent + sum(sum(self.map)))
 
-            # randomize the position of goals
-            goals = np.zeros((int(size), int(size))).astype(int)
-            goal_counter = 1
-            agent_regions = dict()
-            self.goal_list = []
-            while goal_counter <= self.global_num_agent:
-                agent_pos = self.start_list[goal_counter - 1]
-                valid_tiles = get_connected_region(self.fix_state, agent_regions, agent_pos[0], agent_pos[1])
-                if len(valid_tiles) <= 1:
-                    success_rechoice = False
-                    self.fix_state[agent_pos[0], agent_pos[1]] -= 1
-                    self.fix_state_dict[agent_pos[0], agent_pos[1]].remove(goal_counter)
+        # randomize the position of goals
+        goals = np.zeros((int(size), int(size))).astype(int)
+        goal_counter = 1
+        agent_regions = dict()
+        self.goal_list = []
+        while goal_counter <= self.global_num_agent:
+            agent_pos = self.start_list[goal_counter - 1]
+            valid_tiles = get_connected_region(self.fix_state, agent_regions, agent_pos[0], agent_pos[1])
+            if len(valid_tiles) <= 1:
+                success_rechoice = False
+                self.fix_state[agent_pos[0], agent_pos[1]] -= 1
+                self.fix_state_dict[agent_pos[0], agent_pos[1]].remove(goal_counter)
 
-                    while not success_rechoice:
-                        x, y = np.random.randint(0, size), np.random.randint(0, size)
-                        if self.fix_state[x, y] == 0:
-                            self.fix_state[x, y] += 1
-                            valid_tiles = get_connected_region(self.fix_state, agent_regions, x, y)
-                            if len(valid_tiles) > 1:
-                                success_rechoice = True
-                                self.start_list[goal_counter - 1] = (x, y)
-                                self.fix_state_dict[x, y].append(goal_counter)
-                            else:
-                                self.fix_state[x, y] -= 1
+                while not success_rechoice:
+                    x, y = np.random.randint(0, size), np.random.randint(0, size)
+                    if self.fix_state[x, y] == 0:
+                        self.fix_state[x, y] += 1
+                        valid_tiles = get_connected_region(self.fix_state, agent_regions, x, y)
+                        if len(valid_tiles) > 1:
+                            success_rechoice = True
+                            self.start_list[goal_counter - 1] = (x, y)
+                            self.fix_state_dict[x, y].append(goal_counter)
+                        else:
+                            self.fix_state[x, y] -= 1
 
-                x, y = random.choice(list(valid_tiles))
-                if goals[x, y] == 0 and self.fix_state[x, y] != -1 and (x, y) != self.start_list[goal_counter - 1]:
-                    # ensure new goal does not at the same grid of old goals or obstacles
-                    goals[x, y] = goal_counter
-                    self.goal_list.append((x, y))
-                    goal_counter += 1
-        else:
-            self.global_num_agent =500
-            with open('./maps/eval_map.npy', 'rb') as f:
-                self.map = np.load(f)
-                self.fix_state = np.load(f)
-                self.fix_state_dict = np.load(f,allow_pickle=True).item()
-                self.start_list = np.load(f)
-                self.goal_list = np.load(f)
-                goals = np.load(f)
-
-            self.start_list = list(self.start_list)
-            for i in range(len(self.start_list)):
-                self.start_list[i] = tuple(self.start_list[i])
-
-            self.goal_list = list(self.goal_list)
-            for i in range(len(self.goal_list)):
-                self.goal_list[i] = tuple(self.goal_list[i])
+            x, y = random.choice(list(valid_tiles))
+            if goals[x, y] == 0 and self.fix_state[x, y] != -1 and (x, y) != self.start_list[goal_counter - 1]:
+                # ensure new goal does not at the same grid of old goals or obstacles
+                goals[x, y] = goal_counter
+                self.goal_list.append((x, y))
+                goal_counter += 1
 
         self.world = State(self.fix_state,self.fix_state_dict, goals, self.global_num_agent,self.start_list,self.goal_list,self.observation_size)
 
@@ -389,7 +368,7 @@ class MAPFEnv(gym.Env):
 
         self.previous_action=actions
         all_reach_goal, num_on_goal = self.world.local_task_done()
-        self.total_coll += dynamic_collision_status + agent_collision_status
+        self.total_coll+= dynamic_collision_status+agent_collision_status
         vector[:, :, 4] = (sum(self.sipps_coll) - sum(self.total_coll)) / (sum(self.sipps_coll) + 1)
         vector[:, :, 5] = self.time_step/EnvParameters.EPISODE_LEN
         vector[:, :, 6] = self.time_step/self.makespan
@@ -408,66 +387,29 @@ class MAPFEnv(gym.Env):
     def _global_reset(self,cl_num_task):
         """restart a new task"""
         self.global_set_world(cl_num_task)  # back to the initial situation
-        self.selected_neighbor=0
-        can_not_use,makespan,self.global_num_collison, self.paths=init_pp(self.map,self.start_list,self.goal_list,self.env_id)
-        if makespan>EnvParameters.EPISODE_LEN:
-            can_not_use=True
-        return can_not_use,self.global_num_collison
+        _,_,_, self.paths=init_pp(self.map,self.start_list,self.goal_list,self.env_id)
+        return
 
-    def _local_reset(self, local_num_agents,first_time,ALNS):
+    def _local_reset(self, local_num_agents,first_time):
         """restart a new task"""
         self.local_num_agents = local_num_agents
         self.max_on_goal = 0
         self.time_step=0
-        self.previous_action=np.zeros(local_num_agents)
         self.total_coll=np.zeros(local_num_agents)
+        self.previous_action=np.zeros(local_num_agents)
+        if not first_time:
+            for local_index in range(self.local_num_agents):
+                self.paths[self.world.local_agents[local_index]] = self.sipps_path[local_index]
 
-        update_weight=False
-        reduced_collison=0
-        num_update_path=0
-
-        if first_time==False:
-            temp_path = copy.copy(self.paths)
-            if len(self.find_goal) > 0:
-                for local_index in self.find_goal:
-                    temp_path[self.world.local_agents[local_index]] = self.local_path[local_index]
-                temp_num_collison = check_collision(temp_path, self.global_num_agent, self.world.state.shape[0],
-                                                    self.env_id)  # only check neighbor
-                if temp_num_collison<=self.global_num_collison:
-                    update_weight = True
-                    for local_index in self.find_goal:
-                        self.paths[self.world.local_agents[local_index]] =self.local_path[local_index]
-                    num_update_path+=len(self.find_goal)
-                    reduced_collison = self.global_num_collison - temp_num_collison
-
-            if update_weight ==False and self.eval==False:
-                for local_index in range(self.local_num_agents):
-                    temp_path[self.world.local_agents[local_index]] = self.sipps_path[local_index]
-                temp_num_collison = check_collision(temp_path, self.global_num_agent, self.world.state.shape[0],
-                                                    self.env_id)  # only check neighbor
-                if temp_num_collison <= self.global_num_collison:
-                    update_weight = True
-                    for local_index in range(self.local_num_agents):
-                        self.paths[self.world.local_agents[local_index]] = self.sipps_path[local_index]
-
-        if update_weight==False:
-            if first_time==False:
-                self.destroy_weights[self.selected_neighbor]=(1 - TrainingParameters.Destroy_factor)* self.destroy_weights[self.selected_neighbor]
-            else:
-                self.destroy_weights=np.ones(3)
-
-        self.global_num_collison, self.destroy_weights, self.local_agents, global_succ, self.selected_neighbor, self.makespan,self.sipps_path,self.sipps_coll = \
-                adaptive_destroy(self.paths,self.local_num_agents,ALNS,self.global_num_collison,
-                         self.destroy_weights,update_weight,self.selected_neighbor,self.env_id)
-        if global_succ:
-            return True,self.destroy_weights,self.global_num_collison,self.makespan,update_weight,reduced_collison
+        self.local_agents=random.sample(range(self.global_num_agent),local_num_agents)
+        self.sipps_path,self.sipps_coll,self.makespan = calculate_sipps(self.paths,self.local_agents,local_num_agents,self.global_num_agent,self.env_id)
 
         self.world.reset_local_tasks(self.fix_state,self.fix_state_dict,self.start_list,self.local_agents)
 
         self.local_path=[]
         for i in range(self.local_num_agents):
             self.local_path.append([self.world.local_agents_poss[i]])
-        return False,self.destroy_weights,self.global_num_collison,self.makespan,num_update_path,reduced_collison
+        return
 
     def list_next_valid_actions(self,local_agent_index):
      return self.world.list_next_valid_actions(local_agent_index)
@@ -484,42 +426,46 @@ class MAPFEnv(gym.Env):
             if x < top_left[0] or x >= bottom_right[0] or y >= bottom_right[1] or y < top_left[1]:
                 # exclude agent not in FOV
                 continue
-            if (x,y)==self.goal_list[self.world.local_agents[agent]]:
+            if (x, y) == self.goal_list[self.world.local_agents[agent]]:
                 continue
             other_agents.append(agent)
 
         num_blocking = 0
         if len(other_agents) != 0:
-            start_poss=[]
+            start_poss = []
             goal_poss = []
-            part_path=[]
-            for i in range(self.global_num_agent): # move dynamic obstacles(never collide with static obstacles)
+            part_path = []
+            for i in range(self.global_num_agent):  # move dynamic obstacles(never collide with static obstacles)
                 if i not in self.world.local_agents:
-                    max_len=len(self.paths[i])
-                    if max_len<=self.time_step:  # self.time_step-1 is the last step always stay on it
-                        part_path.append([self.paths[i][max_len-1]])
-                        start_poss.append(self.paths[i][max_len-1])
-                        goal_poss.append(self.paths[i][max_len-1])
+                    max_len = len(self.paths[i])
+                    if max_len <= self.time_step:  # self.time_step-1 is the last step always stay on it
+                        part_path.append([self.paths[i][max_len - 1]])
+                        start_poss.append(self.paths[i][max_len - 1])
+                        goal_poss.append(self.paths[i][max_len - 1])
                     else:
                         start_poss.append(self.paths[i][self.time_step])
                         goal_poss.append(self.goal_list[i])
                         part_path.append(self.paths[i][self.time_step:])
 
-            reuse_flag=False
-            self_pos=self.map.shape[0]*self.world.local_agents_poss[local_agent_index][0]+self.world.local_agents_poss[local_agent_index][1]
-            for agent in other_agents:   # local agent index
-                agent_start=self.map.shape[0]*self.world.local_agents_poss[agent][0]+self.world.local_agents_poss[agent][1]
-                agent_goal=self.map.shape[0]*self.goal_list[self.world.local_agents[agent]][0]+self.goal_list[self.world.local_agents[agent]][1]
-                path_after = single_sipps(len(start_poss)+1,agent_start,agent_goal,
-                                          self.env_id,reuse_flag,start_poss,goal_poss,part_path)
-                reuse_flag=True
-                path_before = single_sipps(len(start_poss)+2,agent_start,agent_goal,
-                                           self.env_id,reuse_flag,self_pos=self_pos)
+            reuse_flag = False
+            self_pos = self.map.shape[0] * self.world.local_agents_poss[local_agent_index][0] + \
+                       self.world.local_agents_poss[local_agent_index][1]
+            for agent in other_agents:  # local agent index
+                agent_start = self.map.shape[0] * self.world.local_agents_poss[agent][0] + \
+                              self.world.local_agents_poss[agent][1]
+                agent_goal = self.map.shape[0] * self.goal_list[self.world.local_agents[agent]][0] + \
+                             self.goal_list[self.world.local_agents[agent]][1]
+                path_after = single_sipps(len(start_poss) + 1, agent_start, agent_goal,
+                                          self.env_id, reuse_flag, start_poss, goal_poss, part_path)
+                reuse_flag = True
+                path_before = single_sipps(len(start_poss) + 2, agent_start, agent_goal,
+                                           self.env_id, reuse_flag, self_pos=self_pos)
 
                 if len(path_before) > len(path_after) + EnvParameters.INFLATION:
                     num_blocking += 1
 
         return num_blocking * EnvParameters.BLOCKING_COST,num_blocking
+
     #
     # def create_rectangle(self, x, y, width, height, fill, permanent=False):
     #     """draw a rectangle to represent an agent"""
@@ -613,37 +559,37 @@ if __name__ == '__main__':
     from model import Model
     import torch
     import os
-    env = MAPFEnv(1)
-    if not os.path.exists("./record_files"):
-        os.makedirs("./record_files")
-    can_not_use,global_num_collison=env._global_reset()
-    global_task_solved,destroy_weights,global_num_collison, makespan=env._local_reset(8, False, True,True)
-
-
-    prev_action = np.zeros(8)
-    valid_actions = []
-    obs = np.zeros((1, 8, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE, EnvParameters.FOV_SIZE),
-                   dtype=np.float32)
-    vector = np.zeros((1, 8, NetParameters.VECTOR_LEN), dtype=np.float32)
-    hidden_state = (
-        torch.zeros((8, NetParameters.NET_SIZE)).to(torch.device('cpu')),
-        torch.zeros((8, NetParameters.NET_SIZE)).to(torch.device('cpu')))
-    for i in range(8):
-        valid_action = env.list_next_valid_actions(i)
-        s = env.observe(i)
-        obs[:, i, :, :, :] = s[0]
-        vector[:, i, : 3] = s[1]
-        vector[:, i, -1] = prev_action[i]
-        valid_actions.append(valid_action)
-
-    model= Model(0,torch.device('cpu'))
-
-    actions, ps, values, pre_block, output_state, num_invalid = \
-        model.step(obs, vector, valid_actions, hidden_state, 8)
-    obs, vector, rewards, done, next_valid_actions, blockings, num_blockings,leave_goals, num_on_goal, max_on_goal, \
-    num_dynamic_collide, modify_actions=    env.joint_step(actions, model, 0, output_state, ps,valid_actions)
-
-    global_task_solved, destroy_weights, global_num_collison = env._local_reset(8, False, False, True)
+    # env = MAPFEnv(1)
+    # if not os.path.exists("./record_files"):
+    #     os.makedirs("./record_files")
+    # can_not_use,global_num_collison=env._global_reset()
+    # global_task_solved,destroy_weights,global_num_collison, makespan=env._local_reset(8, False, True,True)
+    #
+    #
+    # prev_action = np.zeros(8)
+    # valid_actions = []
+    # obs = np.zeros((1, 8, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE, EnvParameters.FOV_SIZE),
+    #                dtype=np.float32)
+    # vector = np.zeros((1, 8, NetParameters.VECTOR_LEN), dtype=np.float32)
+    # hidden_state = (
+    #     torch.zeros((8, NetParameters.NET_SIZE)).to(torch.device('cpu')),
+    #     torch.zeros((8, NetParameters.NET_SIZE)).to(torch.device('cpu')))
+    # for i in range(8):
+    #     valid_action = env.list_next_valid_actions(i)
+    #     s = env.observe(i)
+    #     obs[:, i, :, :, :] = s[0]
+    #     vector[:, i, : 3] = s[1]
+    #     vector[:, i, -1] = prev_action[i]
+    #     valid_actions.append(valid_action)
+    #
+    # model= Model(0,torch.device('cpu'))
+    #
+    # actions, ps, values, pre_block, output_state, num_invalid = \
+    #     model.step(obs, vector, valid_actions, hidden_state, 8)
+    # obs, vector, rewards, done, next_valid_actions, blockings, num_blockings,leave_goals, num_on_goal, max_on_goal, \
+    # num_dynamic_collide, modify_actions=    env.joint_step(actions, model, 0, output_state, ps,valid_actions)
+    #
+    # global_task_solved, destroy_weights, global_num_collison = env._local_reset(8, False, False, True)
 
     print("testing")
 

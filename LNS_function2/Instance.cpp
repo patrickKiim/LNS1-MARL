@@ -105,50 +105,6 @@ list<int> Instance::getNeighbors(int curr) const  // get truely moveable agent
 
 bool Instance::validateSolution(const vector<Path*>& paths, int sum_of_costs, int num_of_colliding_pairs) const
 {
-    if (paths.size() != start_locations.size())  // number of paths=number of agents
-    {
-        cerr << "We have " << paths.size() << " for " << start_locations.size() << " agents." << endl;
-        exit(-1);
-    }
-    int sum = 0;
-    for (auto i = 0; i < start_locations.size(); i++)
-    {
-        if (paths[i] == nullptr or paths[i]->empty())
-        {
-            cerr << "No path for agent " << i << endl;
-            exit(-1);
-        }
-        else if (start_locations[i] != paths[i]->front().location)
-        {
-            cerr << "The path of agent " << i << " starts from location " << paths[i]->front().location
-                 << ", which is different from its start location " << start_locations[i] << endl;
-            exit(-1);
-        }
-        else if (goal_locations[i] != paths[i]->back().location)
-        {
-//            return false;
-            cerr << "The path of agent " << i << " ends at location " << paths[i]->back().location
-                 << ", which is different from its goal location " << goal_locations[i] << endl;
-            exit(-1);
-        }
-        for (int t = 1; t < (int) paths[i]->size(); t++ )  // in one path
-        {
-            if (!validMove(paths[i]->at(t - 1).location, paths[i]->at(t).location))  //invalid: not in one step distacle, on obstacles, exceed map
-            {
-                cerr << "The path of agent " << i << " jumps from "
-                     << paths[i]->at(t - 1).location << " to " << paths[i]->at(t).location
-                     << " between timesteps " << t - 1 << " and " << t << endl;
-                exit(-1);
-            }
-        }
-        sum += (int) paths[i]->size() - 1;
-    }
-    if (sum_of_costs != sum)
-    {
-        cerr << "The computed sum of costs " << sum_of_costs <<
-             " is different from that of the solution " << sum << endl;
-        exit(-1);
-    }
     // check for colliions
     int collisions = 0;
     for (auto i = 0; i < start_locations.size(); i++)  //for every agent
@@ -167,7 +123,6 @@ bool Instance::validateSolution(const vector<Path*>& paths, int sum_of_costs, in
                     {
                         cerr << "Find a vertex conflict between agents " << a1 << " and " << a2 <<
                              " at location " << paths[a1]->at(t).location << " at timestep " << t << endl;
-                        exit(-1);
                     }
                     collisions++;
                     found_collision = true;
@@ -181,7 +136,6 @@ bool Instance::validateSolution(const vector<Path*>& paths, int sum_of_costs, in
                         cerr << "Find an edge conflict between agents " << a1 << " and " << a2 <<
                              " at edge (" << paths[a1]->at(t-1).location << "," << paths[a1]->at(t).location <<
                              ") at timestep " << t << endl;
-                        exit(-1);
                     }
                     collisions++;
                     found_collision = true;
@@ -195,13 +149,12 @@ bool Instance::validateSolution(const vector<Path*>& paths, int sum_of_costs, in
                 {
                     if (paths[a2]->at(t).location == target)  // target conflict
                     {
-                        if (num_of_colliding_pairs == 0)
-                        {
-                            cerr << "Find a target conflict where agent " << a2 << " (of length " << paths[a2]->size() - 1 <<
-                                 ") traverses agent " << a1 << " (of length " << paths[a1]->size() - 1<<
-                                 ")'s target location " << target << " at timestep " << t << endl;
-                            exit(-1);
-                        }
+                        // if (num_of_colliding_pairs == 0)
+                        // {
+                        //     cerr << "Find a target conflict where agent " << a2 << " (of length " << paths[a2]->size() - 1 <<
+                        //          ") traverses agent " << a1 << " (of length " << paths[a1]->size() - 1<<
+                        //          ")'s target location " << target << " at timestep " << t << endl;
+                        // }
                         collisions++;
                         return false;
                     }

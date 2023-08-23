@@ -30,24 +30,24 @@ def global_write_to_wandb(curr_steps, global_perf,num_task):
 def write_to_wandb(step, performance_dict=None, mb_loss=None):
     """record performance using wandb"""
     loss_vals = np.nanmean(mb_loss, axis=0)
-    wandb.log({'Perf/Reward': performance_dict['per_r']}, step=step)
-    wandb.log({'Perf/Valid_rate': performance_dict['per_valid_rate']}, step=step)
-    wandb.log({'Perf/Episode_length': performance_dict['per_episode_len']}, step=step)
-    wandb.log({'Perf/Num_block': performance_dict['per_block']}, step=step)
-    wandb.log({'Perf/Num_leave_goal': performance_dict['per_leave_goal']}, step=step)
-    wandb.log({'Perf/Final_goals': performance_dict['per_final_goals']}, step=step)
-    wandb.log({'Perf/Half_goals': performance_dict['per_half_goals']}, step=step)
-    wandb.log({'Perf/Block_accuracy': performance_dict['per_block_acc']}, step=step)
-    wandb.log({'Perf/Max_goals': performance_dict['per_max_goals']}, step=step)
-    wandb.log({'Perf/Num_dynamic_collide': performance_dict['per_num_dynamic_collide']},
+    wandb.log({'Perf/Reward': performance_dict['reward']}, step=step)
+    wandb.log({'Perf/Valid_rate': performance_dict['invalid']}, step=step)
+    wandb.log({'Perf/Episode_length': performance_dict['num_step']}, step=step)
+    wandb.log({'Perf/Num_block': performance_dict['block']}, step=step)
+    wandb.log({'Perf/Num_leave_goal': performance_dict['num_leave_goal']}, step=step)
+    wandb.log({'Perf/Final_goals': performance_dict['final_goals']}, step=step)
+    wandb.log({'Perf/Half_goals': performance_dict['half_goals']}, step=step)
+    wandb.log({'Perf/Block_accuracy': performance_dict['wrong_blocking']}, step=step)
+    wandb.log({'Perf/Max_goals': performance_dict['max_goals']}, step=step)
+    wandb.log({'Perf/Num_dynamic_collide': performance_dict['num_dynamic_collide']},
               step=step)
-    wandb.log({'Perf/Num_agent_collide': performance_dict['per_num_agent_collide']},
+    wandb.log({'Perf/Num_agent_collide': performance_dict['num_agent_collide']},
               step=step)
-    wandb.log({'Perf/Ep_global_collision': performance_dict["episode_global_collision"]},
+    wandb.log({'Perf/Num_update': performance_dict['num_update_path']},
               step=step)
-    wandb.log({'Perf/Num_update': performance_dict['per_num_update_path']},
+    wandb.log({'Perf/Reduced_collision': performance_dict["reduced_collide"]},
               step=step)
-    wandb.log({'Perf/Reduced_collision': performance_dict["per_reduced_collide"]},
+    wandb.log({'Perf/Be_penaltied': performance_dict["be_penaltied"]},
               step=step)
 
     for (val, name) in zip(loss_vals, RecordingParameters.LOSS_NAME):
@@ -62,45 +62,12 @@ def make_gif(images, file_name):
     imageio.mimwrite(file_name, images, subrectangles=True)
     print("wrote gif")
 
-
-def update_perf(one_episode_perf, performance_dict, num_on_goals, max_on_goals):
-    """record batch performance"""
-    performance_dict['per_r'].append(one_episode_perf['reward'])
-    performance_dict['per_valid_rate'].append(
-        ((one_episode_perf['num_step'] * EnvParameters.LOCAL_N_AGENTS) - one_episode_perf['invalid']) / (
-                one_episode_perf['num_step'] * EnvParameters.LOCAL_N_AGENTS))
-    performance_dict['per_episode_len'].append(one_episode_perf['num_step'])
-    performance_dict['per_block'].append(one_episode_perf['block'])
-    performance_dict['per_leave_goal'].append(one_episode_perf['num_leave_goal'])
-    performance_dict['per_num_dynamic_collide'].append(one_episode_perf['num_dynamic_collide'])
-    performance_dict['per_num_agent_collide'].append(one_episode_perf['num_agent_collide'])
-    performance_dict['per_final_goals'].append(num_on_goals)
-    performance_dict['per_block_acc'].append(
-        ((one_episode_perf['num_step'] * EnvParameters.LOCAL_N_AGENTS) - one_episode_perf['wrong_blocking']) / (
-                one_episode_perf['num_step'] * EnvParameters.LOCAL_N_AGENTS))
-    performance_dict['per_max_goals'].append(max_on_goals)
-    return performance_dict
-
-
 def init_performance_dict_driver():
-    performance_dict = {'per_r': [], 'per_valid_rate': [],
-                        'per_episode_len': [], 'per_block': [],
-                        'per_leave_goal': [], 'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
-                        'per_max_goals': [], 'per_num_dynamic_collide': [], 'per_num_agent_collide': [],
-                        "episode_global_collision": [],
-                        'per_num_update_path': [], 'per_reduced_collide': []}
+    performance_dict = {'num_step': [], 'reward': [], 'invalid': [], 'block': [], 'num_leave_goal': [],
+                        'wrong_blocking': [], 'num_dynamic_collide': [], "num_agent_collide": [],"final_goals":[],
+                        "half_goals":[],"max_goals":[],"num_update_path":[],"reduced_collide":[],"be_penaltied":[]}
+
     return performance_dict
-
-
-def init_performance_dict_runner():
-    performance_dict = {'per_r': [], 'per_valid_rate': [],
-                        'per_episode_len': [], 'per_block': [],
-                        'per_leave_goal': [], 'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
-                        'per_max_goals': [], 'per_num_dynamic_collide': [], 'per_num_agent_collide': [],
-                        "episode_global_collision": [],
-                        'per_num_update_path': 0, 'per_reduced_collide': 0}
-    return performance_dict
-
 
 def init_global_perf():
     global_perf = {"success_time": 0, "num_iteration": [],
@@ -111,8 +78,10 @@ def init_global_perf():
 
 def init_one_episode_perf():
     one_episode_perf = {'num_step': 0, 'reward': 0, 'invalid': 0, 'block': 0, 'num_leave_goal': 0,
-                        'wrong_blocking': 0, 'num_dynamic_collide': 0, "num_agent_collide": 0}
+                        'wrong_blocking': 0, 'num_dynamic_collide': 0, "num_agent_collide": 0,"final_goals":0,
+                        "half_goals":0,"max_goals":0,"num_update_path":0,"reduced_collide":0,"be_penaltied":0}
     return one_episode_perf
+
 
 def eval_init_global_perf():
     global_perf_100, global_perf_200, global_perf_300, global_perf_400 = {}, {}, {}, {},

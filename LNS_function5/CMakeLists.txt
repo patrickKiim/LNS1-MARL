@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(function4)
+project(function5)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories("inc")
 file(GLOB SOURCES "*.cpp" )
 
-add_executable(function4 ${SOURCES})
+add_executable(function5 ${SOURCES})
 
 # Find Boost
 find_package(Boost REQUIRED COMPONENTS program_options system filesystem)
@@ -18,4 +18,4 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 
 include_directories( ${Boost_INCLUDE_DIRS} )
-target_link_libraries(function4 ${Boost_LIBRARIES} Eigen3::Eigen)
+target_link_libraries(function5 ${Boost_LIBRARIES} Eigen3::Eigen)

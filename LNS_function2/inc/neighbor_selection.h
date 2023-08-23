@@ -14,7 +14,8 @@ public:
     vector<double> destroy_weights;
     Neighbor neighbor;
     int num_agents;
-    int selected_neighbor;
+    int selected_neighbor=0;
+    vector<int> num_collision;
 
     Selection(const Instance& instance,const string& pathfile ,bool ALNS ,
                          int neighbor_size,int old_num_collision,const string & init_destory_name,
@@ -46,6 +47,7 @@ private:
     vector<int> goal_table;  // location-> agent id
     inline int linearizeCoordinate(int row, int col,int row_size) const { return (row_size * row + col); }
     void updateCollidingPairs(set<pair<int, int>>& colliding_pairs, int agent_id, const Path& path) const;
+    void calculateColliding(int agent_id, int local_agent_id,const Path& path);
     void build_element();
     void update_weight();
     void chooseDestroyHeuristicbyALNS();

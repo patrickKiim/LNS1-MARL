@@ -6,8 +6,8 @@
 
 
 Instance::Instance( const string& map_fname, const string& agent_fname,
-                    int num_of_agents):
-        map_fname(map_fname), agent_fname(agent_fname), num_of_agents(num_of_agents)
+                    int num_of_agents,int start, int goal, int self):
+        map_fname(map_fname), agent_fname(agent_fname), num_of_agents(num_of_agents),start(start),goal(goal),self(self)
 {
     bool succ = loadMap();
     if (!succ)
@@ -69,8 +69,12 @@ bool Instance::loadAgents()
         return false;
     start_locations.resize(num_of_agents);
     goal_locations.resize(num_of_agents);
+    int load_agent=num_of_agents-2;
+    if (self==-1)
+        load_agent=num_of_agents-1;
+
     char_separator<char> sep(" ");
-    for (int i = 0; i < num_of_agents; i++)
+    for (int i = 0; i < load_agent; i++)
     {
         getline(myfile, line);
         tokenizer< char_separator<char> > tok(line, sep);
@@ -86,7 +90,11 @@ bool Instance::loadAgents()
         col = atoi((*beg).c_str());  // goal row
         goal_locations[i] = linearizeCoordinate(row, col);
     }
-
+    if (self!=-1)
+    {   start_locations[num_of_agents-2]=self;
+        goal_locations[num_of_agents-2]=self;}
+    start_locations[num_of_agents-1]=start;
+    goal_locations[num_of_agents-1]=goal;
     myfile.close();
     return true;
 }
