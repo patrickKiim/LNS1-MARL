@@ -1,7 +1,10 @@
+//coded by Patrick Kim @ MARMOT
+//2023 09 03
+
 #pragma once
 #include "common.h"
 #include "Instance.h"
-#include "BasicLNS.h"
+#include "LNS.h"
 #include "string"
 
 class PP
