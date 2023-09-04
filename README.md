@@ -1,4 +1,4 @@
-# LNS2-MARL
+# LNS1-MARL
 
 The code requires the external libraries BOOST (https://www.boost.org/) and Eigen (https://eigen.tuxfamily.org/). Here is an easy way of installing the required libraries on Ubuntu:
 ```
