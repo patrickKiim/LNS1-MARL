@@ -1,3 +1,5 @@
+//MARMOT specific code
+//2023 09 04
 #include "neighbor_selection.h"
 #include <queue>
 #include <algorithm>
@@ -494,5 +496,3 @@ void Selection::rouletteWheel()
         threshold += destroy_weights[selected_neighbor];
     }
 }
-
-

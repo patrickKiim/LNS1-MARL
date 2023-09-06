@@ -1,5 +1,7 @@
+  //MARMOT specific code
+//2023 09 04
 #pragma once
-#include "BasicLNS.h"
+#include "LNS.h"
 #include "PathTable.h"
 
 enum init_destroy_heuristic { TARGET_BASED, COLLISION_BASED, RANDOM_BASED, INIT_COUNT };

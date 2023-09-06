@@ -13,11 +13,8 @@ public:
 	// enum valid_moves_t { NORTH, EAST, SOUTH, WEST, WAIT_MOVE, MOVE_COUNT };  // MOVE_COUNT is the enum's size
 
 	Instance()=default;
-	Instance(const string& map_fname, const string& agent_fname, int num_of_agents);
-	// int num_of_rows = 0;
-	// int num_of_cols = 0;
-	int num_of_obstacles = 0;
-	int warehouse_width = 0;
+	Instance(const string& map_fname, const string& agent_fname, 
+		int num_of_agents = 0, int num_of_rows = 0, int num_of_cols = 0, int num_of_obstacles = 0, int warehouse_width = 0);
 
 
 	void printAgents() const;
@@ -75,8 +72,6 @@ public:
 
 	int getDefaultNumberOfAgents() const { return num_of_agents; }
 	string getInstanceName() const { return agent_fname; }
-    void savePaths(const string & file_name, const vector<Path*>& paths) const;
-    bool validateSolution(const vector<Path*>& paths, int sum_of_costs, int num_of_colliding_pairs) const;
 private:
 	  // int moves_offset[MOVE_COUNT];
 	  vector<bool> my_map;
@@ -87,7 +82,6 @@ private:
 	  vector<int> start_locations;
 	  vector<int> goal_locations;
 
-	  bool nathan_benchmark = true;
 	  bool loadMap();
 	  void printMap() const;
 	  void saveMap() const;
@@ -106,5 +100,4 @@ private:
 	  // Class  SingleAgentSolver can access private members of Node 
 	  friend class SingleAgentSolver;
 };
-
 

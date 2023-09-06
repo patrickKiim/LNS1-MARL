@@ -4,7 +4,7 @@
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp> // transfer character to token
 #include "PP.h"
-#include "Instance.h"
+#include "instance.h"
 #include "string"
 #include "vector"
 #include <sstream>

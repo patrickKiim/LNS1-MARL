@@ -8,7 +8,7 @@ import numpy as np
 # from matplotlib.colors import hsv_to_rgb
 import math
 
-from my_lns2_imitation import run_pp, adaptive_destroy,check_collision, run_eecbs_intermediate
+from my_lns1_imitation import run_pp, adaptive_destroy,check_collision, run_eecbs_intermediate
 from world_property import State
 from alg_parameters import *
 opposite_actions = {0: -1, 1: 3, 2: 4, 3: 1, 4: 2, 5: 7, 6: 8, 7: 5, 8: 6}

@@ -1,3 +1,4 @@
+//#pragma warning(disable: 4996) //Jiaoyang: I added this line to disable error C4996 caused by CPLEX
 #include "CBSHeuristic.h"
 #include "CBS.h"
 #include <queue>
@@ -709,8 +710,8 @@ pair<int, int> CBSHeuristic::solve2Agents(int a1, int a2, const CBSNode& node, b
 	vector<SingleAgentSolver*> engines{search_engines[a1],   search_engines[a2]};
 	vector<vector<PathEntry>> initial_paths{*paths[a1], *paths[a2]};
 	vector<ConstraintTable> constraints{ConstraintTable(initial_constraints[a1]), ConstraintTable(initial_constraints[a2]) };
-    constraints[0].insert2CT(node, a1);
-    constraints[1].insert2CT(node, a2);
+	constraints[0].build(node, a1);
+	constraints[1].build(node, a2);
 	CBS cbs(engines, constraints, initial_paths, screen);
 	// setUpSubSolver(cbs);
 	cbs.setPrioritizeConflicts(PC);
@@ -760,8 +761,8 @@ tuple<int, int, int> CBSHeuristic::solve2Agents(int a1, int a2, const ECBSNode& 
 	vector<SingleAgentSolver*> engines{ search_engines[a1],   search_engines[a2] };
 	vector<vector<PathEntry>> initial_paths;
 	vector<ConstraintTable> constraints{ ConstraintTable(initial_constraints[a1]), ConstraintTable(initial_constraints[a2]) };
-    constraints[0].insert2CT(node, a1);
-    constraints[1].insert2CT(node, a2);
+	constraints[0].build(node, a1);
+	constraints[1].build(node, a2);
 	CBS cbs(engines, constraints, initial_paths, screen);
 	// setUpSubSolver(cbs);
 	cbs.setPrioritizeConflicts(PC);
@@ -787,7 +788,9 @@ tuple<int, int, int> CBSHeuristic::solve2Agents(int a1, int a2, const ECBSNode& 
 		sub_instances.emplace_back(a1, a2, &node, cbs.num_HL_expanded, (int)cbs.num_HL_expanded);
 	}
 
-	if (cbs.runtime >= time_limit - runtime || cbs.num_HL_expanded > node_limit) // time out or node out
+	if (cbs.runtime >= time_limit - runtime) // time out
+		return make_tuple(0, 0, 0); // using lowerbound to approximate
+    	else if (cbs.num_HL_expanded > node_limit) // node out
 		return make_tuple(cbs.getLowerBound() - cbs.dummy_start->g_val,
 		        cbs.getInitialPathLength(0), cbs.getInitialPathLength(1)); // using lowerbound to approximate
 	else if (cbs.solution_cost  < 0) // no solution

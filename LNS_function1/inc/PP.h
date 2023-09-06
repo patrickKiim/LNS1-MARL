@@ -1,4 +1,4 @@
-//coded by Patrick Kim @ MARMOT
+//coded by MARMOT
 //2023 09 03
 
 #pragma once

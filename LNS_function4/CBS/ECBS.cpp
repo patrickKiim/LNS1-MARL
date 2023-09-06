@@ -290,22 +290,16 @@ bool ECBS::generateRoot()
 		paths_found_initially[i] = search_engines[i]->findSuboptimalPath(*root, initial_constraints[i], paths, i, 0, suboptimality);
 		if (paths_found_initially[i].first.empty())
 		{
-			cerr << "No path exists for agent " << i << endl;
-			delete root;
+			cout << "No path exists for agent " << i << endl;
 			return false;
 		}
-        runtime = (double)(clock() - start) / CLOCKS_PER_SEC;
-		if (runtime > time_limit)
-        {
-		    cout << "Time out when generating the root CT node" << endl;
-            delete root;
-		    return false;
-        }
 		paths[i] = &paths_found_initially[i].first;
 		min_f_vals[i] = paths_found_initially[i].second;
 		root->makespan = max(root->makespan, paths[i]->size() - 1);
 		root->g_val += min_f_vals[i];
 		root->sum_of_costs += (int)paths[i]->size() - 1;
+		num_LL_expanded += search_engines[i]->num_expanded;
+		num_LL_generated += search_engines[i]->num_generated;
 	}
 
 	root->h_val = 0;
@@ -355,6 +349,8 @@ bool ECBS::findPathForSingleAgent(ECBSNode*  node, int ag)
 {
 	clock_t t = clock();
 	auto new_path = search_engines[ag]->findSuboptimalPath(*node, initial_constraints[ag], paths, ag, min_f_vals[ag], suboptimality);
+	num_LL_expanded += search_engines[ag]->num_expanded;
+	num_LL_generated += search_engines[ag]->num_generated;
 	runtime_build_CT += search_engines[ag]->runtime_build_CT;
 	runtime_build_CAT += search_engines[ag]->runtime_build_CAT;
 	runtime_path_finding += (double)(clock() - t) / CLOCKS_PER_SEC;
