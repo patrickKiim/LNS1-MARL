@@ -1,7 +1,8 @@
+//marmot specific code
+//2023 09 05
 #pragma once
-#include "BasicLNS.h"
+#include "LNS.h"
 #include "PathTable.h"
-
 
 class Check
 {
