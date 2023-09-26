@@ -97,7 +97,8 @@ private:
 
 	  int randomWalk(int loc, int steps) const;
 
-	  // Class  SingleAgentSolver can access private members of Node 
+	  //These classes can access private members of Node 
 	  friend class SingleAgentSolver;
+	  friend class PP;
 };
 

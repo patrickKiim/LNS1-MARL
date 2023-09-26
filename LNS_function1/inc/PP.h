@@ -23,6 +23,6 @@ private:
     vector<Agent> agents;
     vector<int> goal_table;  // location-> agent id
     Neighbor neighbor;
-    PathTableWC path_table;
+    PathTable path_table;
     bool updateCollidingPairs(set<pair<int, int>>& colliding_pairs, int agent_id, const Path& path) const;
 };
